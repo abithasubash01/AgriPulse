@@ -1,0 +1,166 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id           String        @id @default(uuid())
+  phone        String        @unique
+  name         String?
+  email        String?
+  passwordHash String?
+  role         String        @default("farmer")
+  firebaseUid  String?       @unique
+  avatar       String?
+  district     String?
+  state        String?
+  isActive     Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  bookmarks    Bookmark[]
+  cropListings CropListing[]
+  enquiries    Enquiry[]
+  messages     Message[]
+  priceAlerts  PriceAlert[]
+  reviews      Review[]
+
+  @@map("users")
+}
+
+model CropListing {
+  id                 String     @id @default(uuid())
+  farmerId           String
+  cropName           String
+  commodity          String
+  variety            String?
+  quantity           Float
+  unit               String     @default("quintal")
+  qualityGrade       String?
+  expectedPrice      Float
+  description        String?
+  farmLatitude       Float?
+  farmLongitude      Float?
+  district           String?
+  state              String?
+  images             String[]   @default([])
+  availabilityStatus String     @default("available")
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
+  bookmarks          Bookmark[]
+  farmer             User       @relation(fields: [farmerId], references: [id], onDelete: Cascade)
+  enquiries          Enquiry[]
+  reviews            Review[]
+
+  @@map("crop_listings")
+}
+
+model Bookmark {
+  id        String      @id @default(uuid())
+  userId    String
+  listingId String
+  createdAt DateTime    @default(now())
+  listing   CropListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  user      User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, listingId])
+  @@map("bookmarks")
+}
+
+model Enquiry {
+  id        String      @id @default(uuid())
+  buyerId   String
+  listingId String
+  message   String
+  status    String      @default("pending")
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  buyer     User        @relation(fields: [buyerId], references: [id], onDelete: Cascade)
+  listing   CropListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@map("enquiries")
+}
+
+model MandiPrice {
+  id          String   @id @default(uuid())
+  state       String
+  district    String
+  market      String
+  commodity   String
+  variety     String?
+  arrivalDate String?
+  minPrice    Float?
+  maxPrice    Float?
+  modalPrice  Float?
+  latitude    Float?
+  longitude   Float?
+  fetchedAt   DateTime @default(now())
+  createdAt   DateTime @default(now())
+
+  @@index([commodity])
+  @@index([state, district])
+  @@map("mandi_prices")
+}
+
+model Message {
+  id         String   @id @default(uuid())
+  senderId   String
+  receiverId String
+  roomId     String
+  content    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  sender     User     @relation(fields: [senderId], references: [id], onDelete: Cascade)
+
+  @@index([roomId])
+  @@map("messages")
+}
+
+model PriceAlert {
+  id          String    @id @default(uuid())
+  userId      String
+  commodity   String
+  targetPrice Float
+  market      String?
+  state       String?
+  isTriggered Boolean   @default(false)
+  isActive    Boolean   @default(true)
+  triggeredAt DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("price_alerts")
+}
+
+model Review {
+  id         String      @id @default(uuid())
+  reviewerId String
+  listingId  String
+  rating     Int
+  comment    String?
+  createdAt  DateTime    @default(now())
+  updatedAt  DateTime    @updatedAt
+  listing    CropListing @relation(fields: [listingId], references: [id], onDelete: Cascade)
+  reviewer   User        @relation(fields: [reviewerId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model Transaction {
+  id         String   @id @default(uuid())
+  buyerId    String
+  farmerId   String
+  listingId  String
+  quantity   Float
+  totalPrice Float
+  status     String   @default("pending")
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@map("transactions")
+}
